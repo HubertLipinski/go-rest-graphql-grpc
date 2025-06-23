@@ -1,0 +1,8 @@
+# Editor config
+.idea
+
+# Dev
+.env
+
+# Docker files
+.docker
