@@ -3,6 +3,8 @@
 
 # Dev
 .env
+.env.dev
+.env.prod
 
 # Docker files
 .docker
