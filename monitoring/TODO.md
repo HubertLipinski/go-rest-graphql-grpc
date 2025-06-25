@@ -2,3 +2,4 @@
 
 - [ ] Grafana
 - [ ] Prometheus
+- [ ] Custom dashboard
