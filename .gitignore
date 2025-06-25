@@ -2,9 +2,8 @@
 .idea
 
 # Dev
-.env
-.env.dev
-.env.prod
+**/.env*
+!**/.env.example
 
 # Docker files
 .docker
