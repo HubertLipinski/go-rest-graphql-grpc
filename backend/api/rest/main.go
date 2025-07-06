@@ -7,6 +7,7 @@ import (
 	"github.com/HubertLipinski/go-rest-graphql-grpc/api/rest/handlers"
 	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/config"
 	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/database"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -33,6 +34,9 @@ func main() {
 	// TODO: DELETE, PUT?
 
 	router.HandleFunc("GET /task/{id}", handlers.GetTasksById(connection))
+
+	// Prometheus metrics
+	router.Handle("/metrics", promhttp.Handler())
 
 	server := http.Server{
 		Addr:    ":8080",
