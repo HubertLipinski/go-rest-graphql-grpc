@@ -1,17 +1,16 @@
 package seeders
 
 import (
-	"database/sql"
 	"log"
-	
+
+	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/database"
 	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/seeders/task"
 )
 
-func SeedDB(db *sql.DB) error {
-
+func SeedDB(connection *database.DBConnection) error {
 	log.Print("Seeding DB")
 
-	err := task.SeedTasks(db)
+	err := task.SeedTasks(connection.Instance)
 	if err != nil {
 		return err
 	}

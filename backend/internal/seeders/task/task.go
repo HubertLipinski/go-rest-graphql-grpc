@@ -4,23 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/repository"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 )
-
-type Task struct {
-	Title string `json:"title"`
-	// TODO: project_id, assigned_id
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Priority    string `json:"priority"`
-	DueDate     string `json:"due_date"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
-}
 
 func TruncateTable(db *sql.DB) error {
 	log.Print("Truncating tasks table")
@@ -53,7 +43,7 @@ func SeedTasks(db *sql.DB) error {
 		return err
 	}
 
-	var tasks []Task
+	var tasks []repository.Task
 
 	err = json.Unmarshal(data, &tasks)
 	if err != nil {

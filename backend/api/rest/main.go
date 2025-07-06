@@ -1,53 +1,45 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
-	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/seeders"
 	"log"
-	"os"
+	"net/http"
 
-	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+	"github.com/HubertLipinski/go-rest-graphql-grpc/api/rest/handlers"
+	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/config"
+	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/database"
 )
 
 func main() {
-	log.Print("Hello from REST")
+	log.Print("Starting REST API")
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Błąd ładowania pliku .env: %v", err)
-	}
+	config.LoadEnv()
 
-	dbHost := os.Getenv("POSTGRES_HOST")
-	dbPort := os.Getenv("POSTGRES_PORT")
-	dbUser := os.Getenv("POSTGRES_USER")
-	dbPassword := os.Getenv("POSTGRES_PASSWORD")
-	dbName := os.Getenv("POSTGRES_DB")
-	dbSSLMode := "disable"
-
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode,
-	)
-
-	db, err := sql.Open("postgres", connStr)
+	connection, err := database.InitDBConnection()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer connection.Close()
 
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+	// TODO: uncomment
+	//err = seeders.SeedDB(connection)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+
+	router := http.NewServeMux()
+
+	router.HandleFunc("GET /tasks", handlers.GetAllTasks(connection))
+	router.HandleFunc("POST /tasks", handlers.CreateTask(connection))
+	// TODO: DELETE, PUT?
+
+	router.HandleFunc("GET /task/{id}", handlers.GetTasksById(connection))
+
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: router,
 	}
 
-	err = seeders.SeedDB(db)
+	log.Println("REST API listening on :8080")
+	log.Fatal(server.ListenAndServe())
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = db.Close()
-	if err != nil {
-		return
-	}
 }
