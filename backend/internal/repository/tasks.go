@@ -2,23 +2,44 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/HubertLipinski/go-rest-graphql-grpc/internal/database"
 )
+
+type DateTimeFormat struct {
+	time.Time
+}
+
+func (ct *DateTimeFormat) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	s = s[1 : len(s)-1]
+	t, err := time.Parse(time.DateTime, s)
+	if err != nil {
+		return err
+	}
+	ct.Time = t
+	return nil
+}
+
+func (ct DateTimeFormat) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ct.Format(time.DateTime))
+}
 
 type Task struct {
 	ID    int    `json:"id"`
 	Title string `json:"title"`
 	// TODO: project_id, assigned_id
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Priority    string `json:"priority"`
-	DueDate     string `json:"due_date"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	Description string         `json:"description"`
+	Status      string         `json:"status"`
+	Priority    string         `json:"priority"`
+	DueDate     DateTimeFormat `json:"due_date"`
+	CreatedAt   string         `json:"created_at"`
+	UpdatedAt   string         `json:"updated_at"`
 }
 
 func IsValidStatus(status string) bool {
@@ -28,10 +49,10 @@ func IsValidStatus(status string) bool {
 		"in_progress": true,
 	}
 
-	return strings.TrimSpace(status) != "" && allowedStatuses[status]
+	return allowedStatuses[status]
 }
 
-func GetAllTasks(db *database.DBConnection, status string, dueDate string) ([]Task, error) {
+func GetAllTasks(db *database.DBConnection, status string, dueDate string) ([]*Task, error) {
 	query := "SELECT * FROM tasks"
 
 	var conditions []string
@@ -64,58 +85,60 @@ func GetAllTasks(db *database.DBConnection, status string, dueDate string) ([]Ta
 		}
 	}(rows)
 
-	var tasks []Task
+	var tasks []*Task
 	for rows.Next() {
-		var t Task
-		err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt)
+		task, err := scanInoTask(rows)
 		if err != nil {
 			return nil, err
 		}
-		tasks = append(tasks, t)
+		tasks = append(tasks, task)
+	}
+
+	if len(tasks) == 0 {
+		tasks = []*Task{}
 	}
 
 	return tasks, nil
 }
 
-func GetTaskById(db *database.DBConnection, taskId string) (*Task, error) {
+func GetTaskById(db *database.DBConnection, taskId int) (*Task, error) {
 	log.Print(taskId)
-	query := "SELECT * FROM tasks WHERE id = $1"
-
-	row := db.Instance.QueryRow(query, taskId)
-
-	var t Task
-	err := row.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt)
+	rows, err := db.Instance.Query("SELECT * FROM tasks WHERE id = $1", taskId)
 	if err != nil {
 		return nil, err
 	}
 
-	return &t, nil
+	for rows.Next() {
+		return scanInoTask(rows)
+	}
+
+	return nil, fmt.Errorf("task %v not found", taskId)
 }
 
 type CreateTaskRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Priority    string `json:"priority"`
-	DueDate     string `json:"due_date"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Status      string         `json:"status"`
+	Priority    string         `json:"priority"`
+	DueDate     DateTimeFormat `json:"due_date"`
 }
 
 func CreateTask(db *database.DBConnection, req *CreateTaskRequest) (*Task, error) {
 	query := `
         INSERT INTO tasks (title, description, status, priority,  due_date)
         VALUES ($1, $2, $3, $4, $5)
-        RETURNING id
+        RETURNING *
     `
 
 	var task Task
-	err := db.Instance.QueryRow(query, req.Title, req.Description, req.Status, req.Priority, req.DueDate).
+	err := db.Instance.QueryRow(query, req.Title, req.Description, req.Status, req.Priority, req.DueDate.Time).
 		Scan(
 			&task.ID,
 			&task.Title,
 			&task.Description,
 			&task.Status,
 			&task.Priority,
-			&task.DueDate,
+			&task.DueDate.Time,
 			&task.CreatedAt,
 			&task.UpdatedAt,
 		)
@@ -124,4 +147,32 @@ func CreateTask(db *database.DBConnection, req *CreateTaskRequest) (*Task, error
 	}
 
 	return &task, nil
+}
+
+func DeleteTaskById(db *database.DBConnection, taskId int) error {
+	// TODO: Check permissions
+	_, err := db.Instance.Exec("DELETE FROM tasks WHERE id = $1", taskId)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func scanInoTask(rows *sql.Rows) (*Task, error) {
+	task := new(Task)
+
+	err := rows.Scan(
+		&task.ID,
+		&task.Title,
+		&task.Description,
+		&task.Status,
+		&task.Priority,
+		&task.DueDate.Time,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+
+	return task, err
 }

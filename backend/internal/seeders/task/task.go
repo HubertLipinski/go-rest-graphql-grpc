@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 )
 
 func TruncateTable(db *sql.DB) error {
@@ -52,13 +51,8 @@ func SeedTasks(db *sql.DB) error {
 
 	log.Printf("Inserting %d tasks...", len(tasks))
 	for _, t := range tasks {
-		dueDate, err := time.Parse(time.DateTime, t.DueDate)
-		if err != nil {
-			return err
-		}
-
 		_, err = db.Exec(`INSERT INTO tasks (title, description, status, priority, due_date) VALUES ($1, $2, $3, $4, $5)`,
-			t.Title, t.Description, t.Status, t.Priority, dueDate)
+			t.Title, t.Description, t.Status, t.Priority, t.DueDate.Time)
 		if err != nil {
 			return fmt.Errorf("error inserting task '%s': %w", t.Title, err)
 		}

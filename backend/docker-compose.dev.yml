@@ -12,13 +12,22 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
+    volumes:
+      - ./.docker/prometheus-data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=3650d'
 
   grafana:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
+    volumes:
+      - ./.docker/grafana-storage:/var/lib/grafana
     depends_on:
       - prometheus
 
@@ -26,3 +35,4 @@ services:
 
 volumes:
   postgres-data:
+  prometheus-data:

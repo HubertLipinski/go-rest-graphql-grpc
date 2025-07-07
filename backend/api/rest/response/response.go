@@ -6,7 +6,7 @@ import (
 )
 
 type APIResponse struct {
-	Status int         `json:"status"`
+	Status int         `json:"status,omitempty"`
 	Data   interface{} `json:"data,omitempty"`
 	Error  string      `json:"error,omitempty"`
 }
@@ -15,12 +15,12 @@ func Success(w http.ResponseWriter, data interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
-	resp := APIResponse{
-		Status: status,
-		Data:   data,
-	}
+	//resp := APIResponse{
+	//	Status: status,
+	//	Data:   data,
+	//}
 
-	_ = json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func Error(w http.ResponseWriter, errMsg string, status int) {
@@ -28,8 +28,7 @@ func Error(w http.ResponseWriter, errMsg string, status int) {
 	w.WriteHeader(status)
 
 	resp := APIResponse{
-		Status: status,
-		Error:  errMsg,
+		Error: errMsg,
 	}
 
 	_ = json.NewEncoder(w).Encode(resp)
